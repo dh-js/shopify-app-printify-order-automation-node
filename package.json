@@ -1,0 +1,23 @@
+{
+  "name": "shopify-app-printify-order-automation-node",
+  "version": "1.0.0",
+  "description": "Shopify to Printify automation",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@sendgrid/mail": "^7.7.0",
+    "axios": "^1.5.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-basic-auth": "^1.2.1",
+    "node-cron": "^3.0.2",
+    "pg-promise": "^11.5.4"
+  },
+  "engines": {
+    "node": "18.15.0"
+  }
+}
