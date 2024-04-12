@@ -477,16 +477,28 @@ function getTrackingInfo_CronJob(db) {
     cron.schedule('41 * * * *', function() {
         console.log('@@@ Running cron job to get tracking numbers from Printify');
 
-        //Quesry for use when orders are being sent to production
+        //Query for use when orders are being sent to production
+        // Modified code to include OR order_sent_to_printify ->> 'sent_to_production' = 'Error'
+        // because there is no harm in checking whether there is tracking info for these orders as they may have been manually sent
+        // not using just IS NOT NULL because error object is sometimes stored in the order_sent_to_printify field so there may be no ID
+        // const sqlQuery = `
+        //     SELECT * FROM orders 
+        //     WHERE 
+        //         (order_sent_to_printify ->> 'sent_to_production' = 'Yes' OR order_sent_to_printify ->> 'sent_to_production' = 'Error')
+        //         AND order_sent_to_printify IS NOT NULL
+        //         AND printify_tracking_number ->> 'tracking_number' = ''
+        //         AND printify_tracking_number ->> 'posted_to_shopify' = ''
+        //         AND printify_tracking_number ->> 'id' != ''
+        //         AND printify_tracking_number IS NOT NULL
+        //         AND order_number > 10154
+        // `;
+        // Modified it to include when printify_tracking_number IS NULL because of the client submitting orders to production manually which results in 'sent_to_production' = 'Error'
         const sqlQuery = `
             SELECT * FROM orders 
             WHERE 
-                order_sent_to_printify ->> 'sent_to_production' = 'Yes'
+                (order_sent_to_printify ->> 'sent_to_production' = 'Yes' OR order_sent_to_printify ->> 'sent_to_production' = 'Error')
                 AND order_sent_to_printify IS NOT NULL
-                AND printify_tracking_number ->> 'tracking_number' = ''
-                AND printify_tracking_number ->> 'posted_to_shopify' = ''
-                AND printify_tracking_number ->> 'id' != ''
-                AND printify_tracking_number IS NOT NULL
+                AND (printify_tracking_number IS NULL OR (printify_tracking_number ->> 'tracking_number' = '' AND printify_tracking_number ->> 'posted_to_shopify' = ''))
                 AND order_number > 10154
         `;
 
@@ -494,7 +506,7 @@ function getTrackingInfo_CronJob(db) {
         .then(orders => {
             //log to the console all of the order numbers that are being checked (just needed for testing)
             const orderNumbers = orders.map(order => order.order_number);
-            //console.log(`The following order numbers will be checked for tracking info: ${orderNumbers.join(', ')}`);
+            console.log(`The following order numbers will be checked for tracking info: ${orderNumbers.join(', ')}`);
 
             //needs to be promise based
             const promises = orders.map(order => {
@@ -510,27 +522,45 @@ function getTrackingInfo_CronJob(db) {
                         const trackingNumber = response.data.shipments[0].number;
                         const trackingURL = response.data.shipments[0].url;
 
-                        // Update the printify_tracking_number field in the database
-                        return db.none(`
-                        UPDATE orders 
-                        SET printify_tracking_number = jsonb_set(
-                            jsonb_set(
+                        // Check if printify_tracking_number is null and create the printify_tracking_number object if it is
+                        if (order.printify_tracking_number === null) {
+                            return db.none(`
+                            UPDATE orders 
+                            SET printify_tracking_number = $1
+                            WHERE order_number = $2
+                            `, [JSON.stringify({
+                                id: order.order_sent_to_printify.id,
+                                carrier: carrier,
+                                tracking_url: trackingURL,
+                                tracking_number: trackingNumber,
+                                posted_to_shopify: ""
+                            }), order.order_number])
+                            .catch(error => {
+                                console.error(`Failed to update order ${order.order_number} in the database:`, error);
+                            });
+                        } else {
+                            // Update the printify_tracking_number field in the database
+                            return db.none(`
+                            UPDATE orders 
+                            SET printify_tracking_number = jsonb_set(
                                 jsonb_set(
-                                    printify_tracking_number, 
-                                    '{carrier}', 
-                                    $1::jsonb
+                                    jsonb_set(
+                                        printify_tracking_number, 
+                                        '{carrier}', 
+                                        $1::jsonb
+                                    ),
+                                    '{tracking_url}', 
+                                    $2::jsonb
                                 ),
-                                '{tracking_url}', 
-                                $2::jsonb
-                            ),
-                            '{tracking_number}', 
-                            $3::jsonb
-                        )
-                        WHERE order_number = $4
-                        `, [JSON.stringify(carrier), JSON.stringify(trackingURL), JSON.stringify(trackingNumber), order.order_number])
-                        .catch(error => {
-                            console.error(`Failed to update order ${order.order_number} in the database:`, error);
-                        });
+                                '{tracking_number}', 
+                                $3::jsonb
+                            )
+                            WHERE order_number = $4
+                            `, [JSON.stringify(carrier), JSON.stringify(trackingURL), JSON.stringify(trackingNumber), order.order_number])
+                            .catch(error => {
+                                console.error(`Failed to update order ${order.order_number} in the database:`, error);
+                            });
+                        }
 
                     }
 
