@@ -232,6 +232,9 @@ function sendOrdersToPrintify_CronJob(db) {
                     error.response.data.message !==
                     "Action temporarily unavailable, please try again in two hours."
                   ) {
+                    console.log(
+                      `Order failed to send to Printify, ordered items were: ${orderedItems}`
+                    );
                     ordersFailedToSendToPrintify.push(
                       `${order.order_number} - ${error.response.data.errors.reason}`
                     );
