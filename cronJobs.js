@@ -109,19 +109,39 @@ function sendOrdersToPrintify_CronJob(db) {
     // 3. shopify_tags does not contain the string "Missing Info" or "Do Not Automate"
     // 4. has_printify_items value MUST BE 'Yes' or 'Partially'
     // 5. required_info_warning must be an empty array
+
+    // Below query is the normal query for normal production
+    // const sqlQuery = `
+    //         SELECT * FROM orders
+    //         WHERE
+    //             (EXTRACT(EPOCH FROM NOW() - created_at)/3600 >= $1 OR shopify_tags LIKE '%Automate now%')
+    //             AND EXTRACT(EPOCH FROM NOW() - created_at)/3600 <= $2 + 1
+    //             AND has_been_cancelled = ''
+    //             AND (order_sent_to_printify IS NULL OR order_sent_to_printify ->> 'message' = 'Action temporarily unavailable, please try again in two hours.')
+    //             AND shopify_tags NOT LIKE '%Missing Info%'
+    //             AND shopify_tags NOT LIKE '%Do Not Automate%'
+    //             AND has_printify_items IN ('Yes', 'Partially')
+    //             AND ARRAY_LENGTH(required_info_warning, 1) IS NULL
+    //             AND order_number >= 28704
+    //     `;
+
+    // Below query allows the query to select orders that are either not cancelled or have expired after 48 hours
+    // So if there was a problem & orders that were previously expired need to be selected
+    // But make sure tho adjust the 'from order number X' at bottom of query
+
     const sqlQuery = `
-            SELECT * FROM orders 
-            WHERE 
-                (EXTRACT(EPOCH FROM NOW() - created_at)/3600 >= $1 OR shopify_tags LIKE '%Automate now%')
-                AND EXTRACT(EPOCH FROM NOW() - created_at)/3600 <= $2 + 1
-                AND has_been_cancelled = ''
-                AND (order_sent_to_printify IS NULL OR order_sent_to_printify ->> 'message' = 'Action temporarily unavailable, please try again in two hours.')
-                AND shopify_tags NOT LIKE '%Missing Info%'
-                AND shopify_tags NOT LIKE '%Do Not Automate%'
-                AND has_printify_items IN ('Yes', 'Partially')
-                AND ARRAY_LENGTH(required_info_warning, 1) IS NULL
-                AND order_number >= 10025
-        `;
+    SELECT * FROM orders 
+    WHERE 
+        (EXTRACT(EPOCH FROM NOW() - created_at)/3600 >= $1 OR shopify_tags LIKE '%Automate now%')
+        AND EXTRACT(EPOCH FROM NOW() - created_at)/3600 <= $2 + 1
+        AND (has_been_cancelled = '' OR has_been_cancelled = '48 hours expired - no longer eligible for automation')
+        AND (order_sent_to_printify IS NULL OR order_sent_to_printify ->> 'message' = 'Action temporarily unavailable, please try again in two hours.')
+        AND shopify_tags NOT LIKE '%Missing Info%'
+        AND shopify_tags NOT LIKE '%Do Not Automate%'
+        AND has_printify_items IN ('Yes', 'Partially')
+        AND ARRAY_LENGTH(required_info_warning, 1) IS NULL
+        AND order_number >= 28704
+  `;
 
     db.any(sqlQuery, [
       process.env.AUTOMATED_ORDER_DELAY,
