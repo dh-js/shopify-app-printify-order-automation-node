@@ -94,7 +94,7 @@ function SyncDBWithShopify_CronJob() {
 }
 
 function sendOrdersToPrintify_CronJob(db) {
-  cron.schedule("23 * * * *", function () {
+  cron.schedule("40 * * * *", function () {
     //cron.schedule("39 * * * *", function () {
     console.log(`@@@ Running cron job to send orders to Printify`);
 
