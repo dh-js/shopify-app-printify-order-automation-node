@@ -94,7 +94,8 @@ function SyncDBWithShopify_CronJob() {
 }
 
 function sendOrdersToPrintify_CronJob(db) {
-  cron.schedule("23 * * * *", function () {
+  //cron.schedule("23 * * * *", function () {
+  cron.schedule("39 * * * *", function () {
     console.log(`@@@ Running cron job to send orders to Printify`);
 
     const ordersSuccessfullySentToPrintify = [];
@@ -233,8 +234,16 @@ function sendOrdersToPrintify_CronJob(db) {
                     "Action temporarily unavailable, please try again in two hours."
                   ) {
                     console.log(
-                      `Order failed to send to Printify, ordered items were: ${orderedItems}`
+                      `Order ${
+                        order.order_number
+                      } failed to send to Printify. Error: ${JSON.stringify(
+                        error.response.data
+                      )}`
                     );
+                    console.log(
+                      `${order.order_number} - failed to send to Printify "${error.response.data.errors.reason}", ordered items were: ${orderedItems}`
+                    );
+
                     ordersFailedToSendToPrintify.push(
                       `${order.order_number} - ${error.response.data.errors.reason}`
                     );
