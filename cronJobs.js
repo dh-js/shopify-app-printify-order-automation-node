@@ -128,6 +128,7 @@ function sendOrdersToPrintify_CronJob(db) {
     // Below query allows the query to select orders that are either not cancelled or have expired after 48 hours
     // So if there was a problem & orders that were previously expired need to be selected
     // But make sure tho adjust the 'from order number X' at bottom of query
+    // And change the 'HOW_LONG_WAIT_BEFORE_REFUNDING' env var from 48 to required number
 
     const sqlQuery = `
     SELECT * FROM orders 
