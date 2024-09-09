@@ -94,8 +94,7 @@ function SyncDBWithShopify_CronJob() {
 }
 
 function sendOrdersToPrintify_CronJob(db) {
-  cron.schedule("48 * * * *", function () {
-    //cron.schedule("39 * * * *", function () {
+  cron.schedule("23 * * * *", function () {
     console.log(`@@@ Running cron job to send orders to Printify`);
 
     const ordersSuccessfullySentToPrintify = [];
@@ -111,38 +110,39 @@ function sendOrdersToPrintify_CronJob(db) {
     // 5. required_info_warning must be an empty array
 
     // Below query is the normal query for normal production
-    // const sqlQuery = `
-    //         SELECT * FROM orders
-    //         WHERE
-    //             (EXTRACT(EPOCH FROM NOW() - created_at)/3600 >= $1 OR shopify_tags LIKE '%Automate now%')
-    //             AND EXTRACT(EPOCH FROM NOW() - created_at)/3600 <= $2 + 1
-    //             AND has_been_cancelled = ''
-    //             AND (order_sent_to_printify IS NULL OR order_sent_to_printify ->> 'message' = 'Action temporarily unavailable, please try again in two hours.')
-    //             AND shopify_tags NOT LIKE '%Missing Info%'
-    //             AND shopify_tags NOT LIKE '%Do Not Automate%'
-    //             AND has_printify_items IN ('Yes', 'Partially')
-    //             AND ARRAY_LENGTH(required_info_warning, 1) IS NULL
-    //             AND order_number >= 28704
-    //     `;
+    const sqlQuery = `
+            SELECT * FROM orders
+            WHERE
+                (EXTRACT(EPOCH FROM NOW() - created_at)/3600 >= $1 OR shopify_tags LIKE '%Automate now%')
+                AND EXTRACT(EPOCH FROM NOW() - created_at)/3600 <= $2 + 1
+                AND has_been_cancelled = ''
+                AND (order_sent_to_printify IS NULL OR order_sent_to_printify ->> 'message' = 'Action temporarily unavailable, please try again in two hours.')
+                AND shopify_tags NOT LIKE '%Missing Info%'
+                AND shopify_tags NOT LIKE '%Do Not Automate%'
+                AND has_printify_items IN ('Yes', 'Partially')
+                AND ARRAY_LENGTH(required_info_warning, 1) IS NULL
+                AND order_number >= 28704
+        `;
 
-    // Below query allows the query to select orders that are either not cancelled or have expired after 48 hours
+    // Below query allows the query to select orders that are either not cancelled or have expired after 48 hours. The line changed is:
+    // AND (has_been_cancelled = '' OR has_been_cancelled = '48 hours expired - no longer eligible for automation')
     // So if there was a problem & orders that were previously expired need to be selected
-    // But make sure tho adjust the 'from order number X' at bottom of query
+    // But make sure to adjust the 'from order number X' at bottom of query
     // And change the 'HOW_LONG_WAIT_BEFORE_REFUNDING' env var from 48 to required number
 
-    const sqlQuery = `
-    SELECT * FROM orders 
-    WHERE 
-        (EXTRACT(EPOCH FROM NOW() - created_at)/3600 >= $1 OR shopify_tags LIKE '%Automate now%')
-        AND EXTRACT(EPOCH FROM NOW() - created_at)/3600 <= $2 + 1
-        AND (has_been_cancelled = '' OR has_been_cancelled = '48 hours expired - no longer eligible for automation')
-        AND (order_sent_to_printify IS NULL OR order_sent_to_printify ->> 'message' = 'Action temporarily unavailable, please try again in two hours.')
-        AND shopify_tags NOT LIKE '%Missing Info%'
-        AND shopify_tags NOT LIKE '%Do Not Automate%'
-        AND has_printify_items IN ('Yes', 'Partially')
-        AND ARRAY_LENGTH(required_info_warning, 1) IS NULL
-        AND order_number >= 28704
-  `;
+    //   const sqlQuery = `
+    //   SELECT * FROM orders
+    //   WHERE
+    //       (EXTRACT(EPOCH FROM NOW() - created_at)/3600 >= $1 OR shopify_tags LIKE '%Automate now%')
+    //       AND EXTRACT(EPOCH FROM NOW() - created_at)/3600 <= $2 + 1
+    //       AND (has_been_cancelled = '' OR has_been_cancelled = '48 hours expired - no longer eligible for automation')
+    //       AND (order_sent_to_printify IS NULL OR order_sent_to_printify ->> 'message' = 'Action temporarily unavailable, please try again in two hours.')
+    //       AND shopify_tags NOT LIKE '%Missing Info%'
+    //       AND shopify_tags NOT LIKE '%Do Not Automate%'
+    //       AND has_printify_items IN ('Yes', 'Partially')
+    //       AND ARRAY_LENGTH(required_info_warning, 1) IS NULL
+    //       AND order_number >= 28704
+    // `;
 
     db.any(sqlQuery, [
       process.env.AUTOMATED_ORDER_DELAY,
