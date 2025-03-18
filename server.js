@@ -243,10 +243,14 @@ async function handleOrder(req, db) {
     //################################################## END OF ORDERED ITEMS LOGIC #############################
 
     //################################################## START OF SHIPPING SPEED LOGIC #############################
-    // Determine shipping speed based on Shopify shipping title - 1 is 'Standard', 2 is 'Priority'
+    // Determine shipping speed based on Shopify shipping title
     let shipping_speed = {};
     if (shopify_shipping_price) {
-      if (shopify_shipping_price === '0.00') {
+      if (shopify_shipping_title && shopify_shipping_title.toLowerCase() === "premium") {
+        shipping_speed.printify_shipping_method = 'Express';
+        shipping_speed.shopify_profile = shopify_shipping_title;
+        shipping_speed.shopify_price = shopify_shipping_price;
+      } else if (shopify_shipping_price === '0.00') {
         shipping_speed.printify_shipping_method = 'Standard';
         shipping_speed.shopify_profile = shopify_shipping_title;
         shipping_speed.shopify_price = shopify_shipping_price;

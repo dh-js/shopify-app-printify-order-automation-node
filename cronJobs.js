@@ -166,6 +166,10 @@ function sendOrdersToPrintify_CronJob(db) {
               order.shipping_speed.printify_shipping_method === "Priority"
             ) {
               shippingMethod = 2;
+            } else if (
+              order.shipping_speed.printify_shipping_method === "Express"
+            ) {
+              shippingMethod = 3;
             }
 
             //Determine items to be ordered
