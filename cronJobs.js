@@ -187,6 +187,8 @@ function sendOrdersToPrintify_CronJob(db) {
               label: "",
               line_items: orderedItems,
               shipping_method: shippingMethod,
+              is_printify_express: shippingMethod === 3 ? true : false,
+              is_economy_shipping: false,
               send_shipping_notification:
                 process.env.PRINTIFY_SHIPPING_NOTIFICATIONS === "on"
                   ? true
@@ -195,7 +197,7 @@ function sendOrdersToPrintify_CronJob(db) {
                 first_name: order.shipping_address_details.first_name,
                 last_name: order.shipping_address_details.last_name,
                 email: order.shipping_address_details.email,
-                phone: "",
+                phone: order.shipping_address_details.phone,
                 country: order.shipping_address_details.country_code,
                 region: order.shipping_address_details.province,
                 address1: order.shipping_address_details.address1,
@@ -210,7 +212,10 @@ function sendOrdersToPrintify_CronJob(db) {
             return (
               axios
                 .post(
-                  `https://api.printify.com/v1/shops/${process.env.PRINTIFY_SHOP_ID}/orders.json`,
+                  // Use the express endpoint when shipping method is Express (3)
+                  shippingMethod === 3 
+                    ? `https://api.printify.com/v1/shops/${process.env.PRINTIFY_SHOP_ID}/orders/express.json`
+                    : `https://api.printify.com/v1/shops/${process.env.PRINTIFY_SHOP_ID}/orders.json`,
                   orderData,
                   {
                     headers: {

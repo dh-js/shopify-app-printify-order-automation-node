@@ -148,6 +148,11 @@ async function handleOrder(req, db) {
     } = req.body;
 
     // Deconstruct shipping details
+    try{
+      console.log('shipping_address', JSON.stringify(shipping_address, null, 2));
+    } catch (error) {
+      console.log('Error logging shipping address:', error);
+    }
     const {
       first_name,
       last_name,
@@ -157,13 +162,28 @@ async function handleOrder(req, db) {
       country_code,
       province_code: province,
       zip,
-      name
+      name,
+      phone: shipping_phone
     } = shipping_address || {};
 
-    // Deconstruct email
+    // Deconstruct email and phone from customer
+    try{
+      console.log('customer', JSON.stringify(customer, null, 2));
+    } catch (error) {
+      console.log('Error logging customer:', error);
+    }
     const {
-      email
+      email,
+      phone: customer_phone
     } = customer || {};
+    
+    // Log if phone numbers are available
+    if (shipping_phone || customer_phone) {
+      console.log(`Order ${order_number}: Phone numbers available - Shipping: ${shipping_phone || 'N/A'}, Customer: ${customer_phone || 'N/A'}`);
+    }
+
+    // Use shipping_phone as priority, fall back to customer_phone if available
+    const phone = shipping_phone || customer_phone || '';
 
     // Add shipping details to new shipping_address_details object
     const shipping_address_details = {
@@ -176,7 +196,8 @@ async function handleOrder(req, db) {
       province,
       zip,
       name,
-      email
+      email,
+      phone
     };
 
     // Deconstruct for shipping speed/method
