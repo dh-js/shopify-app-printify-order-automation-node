@@ -271,6 +271,12 @@ async function handleOrder(req, db) {
         shipping_speed.printify_shipping_method = 'Express';
         shipping_speed.shopify_profile = shopify_shipping_title;
         shipping_speed.shopify_price = shopify_shipping_price;
+        
+        // Set default phone number for Express shipping if phone is missing
+        if (!shipping_address_details.phone || shipping_address_details.phone.trim() === '') {
+          console.log(`Order ${order_number}: Setting default phone number for Express shipping`);
+          shipping_address_details.phone = '9044001945';
+        }
       } else if (shopify_shipping_price === '0.00') {
         shipping_speed.printify_shipping_method = 'Standard';
         shipping_speed.shopify_profile = shopify_shipping_title;
@@ -640,7 +646,8 @@ app.get('/viewOrders',
                 'province', 
                 'zip',
                 'name',
-                'email'
+                'email',
+                'phone'
               ].map(k => `"${k}": "${row[key][k] || ''}"`).join('<br>');
               html += `<td><pre>{<br>${orderedDetails}<br>}</pre></td>`;
         
