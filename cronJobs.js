@@ -447,9 +447,24 @@ function sendPrintifyOrdersProduction_CronJob(db) {
       .then((orders) => {
         if (orders.length > 0) {
           const promises = orders.map((order) => {
+            // Get the correct Printify order ID based on whether it's an Express order or not
+            let printifyOrderId;
+            let isExpressOrder = false;
+            
+            if (order.order_sent_to_printify.data) {
+              // Express order - ID is in data[0].id
+              printifyOrderId = order.order_sent_to_printify.data[0].id;
+              isExpressOrder = true;
+              console.log(`Order ${order.order_number} is an Express order with ID: ${printifyOrderId}`);
+            } else {
+              // Standard order - ID is directly in the order_sent_to_printify.id
+              printifyOrderId = order.order_sent_to_printify.id;
+              console.log(`Order ${order.order_number} is a Standard order with ID: ${printifyOrderId}`);
+            }
+
             return axios
               .get(
-                `https://api.printify.com/v1/shops/${process.env.PRINTIFY_SHOP_ID}/orders/${order.order_sent_to_printify.id}.json`,
+                `https://api.printify.com/v1/shops/${process.env.PRINTIFY_SHOP_ID}/orders/${printifyOrderId}.json`,
                 {
                   headers: {
                     Authorization: `Bearer ${process.env.PRINTIFY_API_KEY}`,
@@ -524,15 +539,13 @@ function sendPrintifyOrdersProduction_CronJob(db) {
                       );
                     });
                 } else {
-                  /////test block
-                  //console.log(`Order ${order.order_number} has no missing SKUs so it will be sent to production with id ${order.order_sent_to_printify.id}`)
-                  //ELSE IF THERE ARE NO MISSING SKUS THEN SEND THE ORDER TO PRODUCTION
                   ordersSentToProduction.push(order.order_number);
-                  // ALSO, SET THE printify_tracking_number TO THE RESPONSE
-                  // ADD carrier, tracking_url, tracking_number, posted_to_shopify as new keys TO THE RESPONSE object with empty STRING values
+                  
+                  console.log(`Sending order ${order.order_number} to production with Printify ID: ${printifyOrderId} (Express: ${isExpressOrder})`);
+                  
                   return axios
                     .post(
-                      `https://api.printify.com/v1/shops/${process.env.PRINTIFY_SHOP_ID}/orders/${order.order_sent_to_printify.id}/send_to_production.json`,
+                      `https://api.printify.com/v1/shops/${process.env.PRINTIFY_SHOP_ID}/orders/${printifyOrderId}/send_to_production.json`,
                       {},
                       {
                         headers: {
@@ -541,9 +554,8 @@ function sendPrintifyOrdersProduction_CronJob(db) {
                       }
                     )
                     .then((response) => {
-                      ////test block
-                      //console.log(`Order ${order.order_number} Printify production response:`, response.data);
-
+                      console.log(`Order ${order.order_number} production response:`, JSON.stringify(response.data));
+                      
                       if (response.data.hasOwnProperty("id")) {
                         //console.log(`Order ${order.order_number} has an id property so db being updated`)
                         // Add new keys to the response object
@@ -578,43 +590,41 @@ function sendPrintifyOrdersProduction_CronJob(db) {
                       }
                     })
                     .catch((error) => {
-                      console.error(
-                        `POST Failed to send order ${order.order_number} to production:`,
-                        error.message
-                      );
-                      //console.error(`POST Failed to send order ${order.order_number} to production:`, error);
-                      // Log the status code and status text
+                      console.error(`Failed to send order ${order.order_number} to production:`);
+                      
+                      // Log the error response in a structured way
                       if (error.response) {
-                        console.error(
-                          `Response status:`,
-                          error.response.status
-                        );
-                        console.error(
-                          `Status text:`,
-                          error.response.statusText
-                        );
-
-                        // Log the headers
-                        console.error(`Headers:`, error.response.headers);
-
-                        // Log the response data
-                        console.error(`Data:`, error.response.data);
+                        console.error(`Status code: ${error.response.status}`);
+                        console.error(`Status text: ${error.response.statusText}`);
+                        console.error(`Response data: ${JSON.stringify(error.response.data)}`);
+                        console.error(`Order type: ${isExpressOrder ? 'Express' : 'Standard'}`);
+                        console.error(`Printify ID used: ${printifyOrderId}`);
+                      } else if (error.request) {
+                        console.error(`Request was made but no response received: ${JSON.stringify(error.request)}`);
+                      } else {
+                        console.error(`Error setting up request: ${error.message}`);
                       }
-
-                      // Log the request that was made
-                      if (error.request) {
-                        console.error(`Request made:`, error.request);
-                      }
-
+                      
                       errorsArray.push(`${order.order_number}`);
                     });
                 }
               })
               .catch((error) => {
-                console.error(
-                  `Error getting created order info from Printify for ${order.order_number}:`,
-                  error
-                );
+                console.error(`Error getting created order info from Printify for ${order.order_number}:`);
+                
+                // Log the error response in a structured way
+                if (error.response) {
+                  console.error(`Status code: ${error.response.status}`);
+                  console.error(`Status text: ${error.response.statusText}`);
+                  console.error(`Response data: ${JSON.stringify(error.response.data)}`);
+                  console.error(`Order type: ${isExpressOrder ? 'Express' : 'Standard'}`);
+                  console.error(`Printify ID used: ${printifyOrderId}`);
+                } else if (error.request) {
+                  console.error(`Request was made but no response received: ${JSON.stringify(error.request)}`);
+                } else {
+                  console.error(`Error setting up request: ${error.message}`);
+                }
+                
                 errorsArray.push(`${order.order_number}`);
               });
           });
@@ -688,7 +698,10 @@ function sendPrintifyOrdersProduction_CronJob(db) {
         }
       })
       .catch((error) => {
-        console.error("Error getting orders from the database:", error);
+        console.error("Error getting orders from the database:", error.message);
+        if (error.stack) {
+          console.error("Stack trace:", error.stack);
+        }
       });
 
     console.log("Sending Printify orders to production cron completed");

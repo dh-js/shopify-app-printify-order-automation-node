@@ -148,11 +148,11 @@ async function handleOrder(req, db) {
     } = req.body;
 
     // Deconstruct shipping details
-    try{
-      console.log('shipping_address', JSON.stringify(shipping_address, null, 2));
-    } catch (error) {
-      console.log('Error logging shipping address:', error);
-    }
+    // try{
+    //   console.log('shipping_address', JSON.stringify(shipping_address, null, 2));
+    // } catch (error) {
+    //   console.log('Error logging shipping address:', error);
+    // }
     const {
       first_name,
       last_name,
@@ -167,11 +167,11 @@ async function handleOrder(req, db) {
     } = shipping_address || {};
 
     // Deconstruct email and phone from customer
-    try{
-      console.log('customer', JSON.stringify(customer, null, 2));
-    } catch (error) {
-      console.log('Error logging customer:', error);
-    }
+    // try{
+    //   console.log('customer', JSON.stringify(customer, null, 2));
+    // } catch (error) {
+    //   console.log('Error logging customer:', error);
+    // }
     const {
       email,
       phone: customer_phone
@@ -274,7 +274,7 @@ async function handleOrder(req, db) {
         
         // Set default phone number for Express shipping if phone is missing
         if (!shipping_address_details.phone || shipping_address_details.phone.trim() === '') {
-          console.log(`Order ${order_number}: Setting default phone number for Express shipping`);
+           console.log(`Order ${order_number}: Setting default phone number for Express shipping`);
           shipping_address_details.phone = '9044001945';
         }
       } else if (shopify_shipping_price === '0.00') {
