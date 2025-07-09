@@ -745,9 +745,32 @@ function getTrackingInfo_CronJob(db) {
 
         //needs to be promise based
         const promises = orders.map((order) => {
+          // Get the correct Printify order ID based on whether it's an Express order or not
+          let printifyOrderId;
+          let isExpressOrder = false;
+
+          if (
+            order.order_sent_to_printify &&
+            order.order_sent_to_printify.data
+          ) {
+            // Express order - ID is in data[0].id
+            printifyOrderId = order.order_sent_to_printify.data[0].id;
+            isExpressOrder = true;
+          } else if (order.order_sent_to_printify) {
+            // Standard order - ID is directly in the order_sent_to_printify.id
+            printifyOrderId = order.order_sent_to_printify.id;
+          }
+
+          if (!printifyOrderId) {
+            console.error(
+              `Could not determine Printify order ID for order number ${order.order_number}. Skipping tracking info check.`
+            );
+            return Promise.resolve(); // Continue with other promises
+          }
+
           return axios
             .get(
-              `https://api.printify.com/v1/shops/${process.env.PRINTIFY_SHOP_ID}/orders/${order.order_sent_to_printify.id}.json`,
+              `https://api.printify.com/v1/shops/${process.env.PRINTIFY_SHOP_ID}/orders/${printifyOrderId}.json`,
               {
                 headers: {
                   Authorization: `Bearer ${process.env.PRINTIFY_API_KEY}`,
