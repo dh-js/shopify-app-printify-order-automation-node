@@ -82,13 +82,14 @@ async function setupDatabase() {
 //################################################## END OF TABLE CREATION CODE ########################################
 
 // Define country code arrays for each shipping region
-const US = ['US'];
+const US = ['US', 'MX', 'CL'];
 const Canada = ['CA'];
 const UK = ['GB'];
 const Australia_NewZealand = ['AU', 'NZ'];
 const EU = ['AT', 'BE', 'BG', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'PL', 'PT', 'RO', 'SE', 'SI', 'SK'];
 const otherEuropeanCountries = ['AL', 'AD', 'AM', 'AZ', 'BA', 'BY', 'CH', 'FO', 'GE', 'GI', 'IS', 'LI', 'MC', 'ME', 'MK', 'NO', 'RS', 'RU', 'SM', 'UA', 'VA', 'GG', 'IM', 'JE'];
-const allEuropeanCountries = [...EU, ...otherEuropeanCountries];
+const newlyAddedCountries = ['JP', 'SG', 'AE', 'KR', 'HK', 'IL', 'ZA', 'IN', 'SA', 'GU'];
+const allEuropeanCountries = [...EU, ...otherEuropeanCountries, ...newlyAddedCountries];
 
 // Function to determine the shipping region for a given country code
 const getShippingRegion = (countryCode) => {
