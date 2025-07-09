@@ -747,7 +747,6 @@ function getTrackingInfo_CronJob(db) {
         const promises = orders.map((order) => {
           // Get the correct Printify order ID based on whether it's an Express order or not
           let printifyOrderId;
-          let isExpressOrder = false;
 
           if (
             order.order_sent_to_printify &&
@@ -755,7 +754,6 @@ function getTrackingInfo_CronJob(db) {
           ) {
             // Express order - ID is in data[0].id
             printifyOrderId = order.order_sent_to_printify.data[0].id;
-            isExpressOrder = true;
           } else if (order.order_sent_to_printify) {
             // Standard order - ID is directly in the order_sent_to_printify.id
             printifyOrderId = order.order_sent_to_printify.id;
